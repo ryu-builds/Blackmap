@@ -6,11 +6,6 @@ import type { IncomingMessage, ServerResponse } from "http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
-// pino-http only ships CJS-style types ("export ="), which TypeScript's
-// "moduleResolution": "Bundler" mode can't reconcile with a default ESM
-// import (a known upstream limitation shared with pino, zustand, postcss
-// under this same config). This cast is safe: at runtime pino-http's
-// export really is this callable factory — only the type checker is confused.
 const pinoHttp = pinoHttpImport as unknown as (opts?: {
   logger?: typeof logger;
   serializers?: {
