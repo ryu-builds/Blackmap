@@ -1,7 +1,7 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import type { HealthStatus } from "@workspace/api-zod";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.get("/healthz", (_req, res) => {
   const data: HealthStatus = { status: "ok" };
