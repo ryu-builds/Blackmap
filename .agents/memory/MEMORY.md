@@ -1,0 +1,2 @@
+- [Recon Engine Architecture](recon-engine.md) — real static analysis engine replacing placeholder simulation; engine/ modules under api-server
+- [AI Analysis Layer](ai-layer.md) — provider abstraction + 7 report generators + chat; routes at /api/ai/reports/:jobId and /api/ai/chat/:jobId

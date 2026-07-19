@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "BlackMap Recon"
+version = "1.0.0"
+id = "artifacts/blackmap-recon"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22863
+
+[services.development]
+run = "pnpm --filter @workspace/blackmap-recon run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/blackmap-recon", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/blackmap-recon/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22863"
+BASE_PATH = "/"

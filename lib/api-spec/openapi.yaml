@@ -1,0 +1,432 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: BlackMap Recon API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: recon
+    description: Reconnaissance analysis operations
+  - name: dashboard
+    description: Dashboard summary operations
+  - name: settings
+    description: Application settings operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /recon/analyze:
+    post:
+      operationId: startAnalysis
+      tags: [recon]
+      summary: Start a new recon analysis
+      description: Submit a GitHub repo URL or file upload for analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisInput"
+      responses:
+        "202":
+          description: Analysis job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisJob"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /recon/jobs:
+    get:
+      operationId: listJobs
+      tags: [recon]
+      summary: List all analysis jobs
+      description: Returns all submitted analysis jobs sorted by most recent
+      responses:
+        "200":
+          description: List of analysis jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalysisJob"
+
+  /recon/jobs/{jobId}:
+    get:
+      operationId: getJob
+      tags: [recon]
+      summary: Get a specific analysis job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Analysis job details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisJob"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteJob
+      tags: [recon]
+      summary: Delete an analysis job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Job deleted
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /recon/jobs/{jobId}/results:
+    get:
+      operationId: getJobResults
+      tags: [recon]
+      summary: Get results for a completed analysis job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Analysis results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+        "404":
+          description: Job not found or results not yet available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary statistics
+      description: Returns aggregate stats for the dashboard home
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get current application settings
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+
+  /settings/providers:
+    get:
+      operationId: listProviders
+      tags: [settings]
+      summary: List available AI providers
+      responses:
+        "200":
+          description: List of available AI providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiProvider"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    AnalysisInput:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [github_url, zip_upload]
+        githubUrl:
+          type: ["string", "null"]
+        fileName:
+          type: ["string", "null"]
+        fileSize:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+      required:
+        - type
+
+    AnalysisJob:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [github_url, zip_upload]
+        target:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        progress:
+          type: integer
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        errorMessage:
+          type: ["string", "null"]
+      required:
+        - id
+        - type
+        - target
+        - status
+        - progress
+        - createdAt
+        - updatedAt
+
+    FindingSeverity:
+      type: string
+      enum: [critical, high, medium, low, info]
+
+    Finding:
+      type: object
+      properties:
+        id:
+          type: string
+        severity:
+          $ref: "#/components/schemas/FindingSeverity"
+        title:
+          type: string
+        description:
+          type: string
+        file:
+          type: ["string", "null"]
+        line:
+          type: ["integer", "null"]
+        category:
+          type: string
+      required:
+        - id
+        - severity
+        - title
+        - description
+        - category
+
+    AnalysisResult:
+      type: object
+      properties:
+        jobId:
+          type: string
+        summary:
+          type: string
+        totalFindings:
+          type: integer
+        criticalCount:
+          type: integer
+        highCount:
+          type: integer
+        mediumCount:
+          type: integer
+        lowCount:
+          type: integer
+        infoCount:
+          type: integer
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+        filesScanned:
+          type: integer
+        linesScanned:
+          type: integer
+        scanDurationMs:
+          type: integer
+        aiProvider:
+          type: ["string", "null"]
+      required:
+        - jobId
+        - summary
+        - totalFindings
+        - criticalCount
+        - highCount
+        - mediumCount
+        - lowCount
+        - infoCount
+        - findings
+        - filesScanned
+        - linesScanned
+        - scanDurationMs
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalAnalyses:
+          type: integer
+        completedAnalyses:
+          type: integer
+        runningAnalyses:
+          type: integer
+        failedAnalyses:
+          type: integer
+        totalFindings:
+          type: integer
+        criticalFindings:
+          type: integer
+        recentJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisJob"
+      required:
+        - totalAnalyses
+        - completedAnalyses
+        - runningAnalyses
+        - failedAnalyses
+        - totalFindings
+        - criticalFindings
+        - recentJobs
+
+    AiProvider:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [available, configured, unavailable]
+        requiresApiKey:
+          type: boolean
+      required:
+        - id
+        - name
+        - description
+        - status
+        - requiresApiKey
+
+    AppSettings:
+      type: object
+      properties:
+        activeProvider:
+          type: ["string", "null"]
+        apiKeys:
+          type: object
+          additionalProperties:
+            type: string
+        theme:
+          type: string
+          enum: [light, dark, system]
+        maxFileSizeMb:
+          type: integer
+        autoAnalyze:
+          type: boolean
+      required:
+        - theme
+        - maxFileSizeMb
+        - autoAnalyze
+
+    SettingsUpdate:
+      type: object
+      properties:
+        activeProvider:
+          type: ["string", "null"]
+        theme:
+          type: ["string", "null"]
+        maxFileSizeMb:
+          type: ["integer", "null"]
+        autoAnalyze:
+          type: ["boolean", "null"]
+        apiKey:
+          type: ["string", "null"]
+        apiKeyProvider:
+          type: ["string", "null"]
