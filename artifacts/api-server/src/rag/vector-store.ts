@@ -52,7 +52,9 @@ async function saveHashes(jobId: string, map: Map<string, string>): Promise<void
 // Chunk metadata shape stored in vectra
 // ---------------------------------------------------------------------------
 
-export interface ChunkMetadata {
+import type { MetadataTypes } from "vectra";
+
+export interface ChunkMetadata extends Record<string, MetadataTypes> {
   id: string;
   jobId: string;
   filePath: string;
@@ -109,7 +111,9 @@ export class VectorStore {
   /** Delete all vectors that belong to a specific file path. */
   async deleteChunksForFile(filePath: string): Promise<number> {
     const items = await this.index.listItems();
-    const toDelete = items.filter((it) => (it.metadata as ChunkMetadata).filePath === filePath);
+    const toDelete = items.filter(
+      (it) => (it.metadata as unknown as ChunkMetadata).filePath === filePath
+    );
 
     if (toDelete.length === 0) return 0;
     await this.index.beginUpdate();
@@ -175,7 +179,11 @@ export class VectorStore {
             fileHash: c.fileHash,
             rawLines: c.rawLines,
           };
-          await this.index.insertItem({ id: c.id, vector: fv[i], metadata: meta });
+          await this.index.insertItem({
+            id: c.id,
+            vector: fv[i],
+            metadata: meta as Record<string, MetadataTypes>,
+          });
         }
         await this.index.endUpdate();
       } catch (err) {
@@ -198,10 +206,11 @@ export class VectorStore {
     topK = 8,
     minScore = 0.0
   ): Promise<SearchResult[]> {
-    const raw: QueryResult<ChunkMetadata>[] = await this.index.queryItems(
+    const raw = await this.index.queryItems<ChunkMetadata>(
       queryVector,
+      "",
       topK
-    );
+  );
     return raw
       .filter((r) => r.score >= minScore)
       .map((r) => ({ score: r.score, chunk: r.item.metadata as ChunkMetadata }));
@@ -217,7 +226,8 @@ export class VectorStore {
     fileHashCount: number;
   }> {
     const items = await this.index.listItems();
-    const files = new Set(items.map((it) => (it.metadata as ChunkMetadata).filePath));
+    const files = new Set(
+      items.map((it) => (it.metadata as unknown as ChunkMetadata).filePath));
     return {
       totalChunks: items.length,
       totalFiles: files.size,
